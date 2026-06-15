@@ -8,8 +8,9 @@ FROM node:${NODE_VERSION}-alpine AS node_base
 FROM node:${NODE_VERSION}-alpine AS build
 WORKDIR /app
 
-COPY package.json  ./
-RUN npm ci
+COPY package.json ./
+RUN npm i --no-audit --no-fund --prefer-offline --legacy-peer-deps \
+    && npm cache clean --force
 
 COPY tsconfig.json ./
 COPY src ./src
@@ -42,9 +43,9 @@ COPY --from=build --chown=mcp:nodejs /app/dist/server.cjs ./server.cjs
 
 USER mcp
 
-EXPOSE 3000
+EXPOSE 8080
 
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
-  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || process.env.MCP_PORT || 3000) + '/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
+  CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || process.env.MCP_PORT || 8080) + '/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
 CMD ["node", "server.cjs"]
