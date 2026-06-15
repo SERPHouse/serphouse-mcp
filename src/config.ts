@@ -13,7 +13,15 @@ export type SerphouseConfig = {
 const DEFAULT_BASE_URL = "https://api.serphouse.com";
 const DEFAULT_TIMEOUT_MS = 60_000;
 const MAX_TIMEOUT_MS = 300_000;
-const PROJECT_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), "..");
+const PROJECT_ROOT = getProjectRoot();
+
+function getProjectRoot(): string {
+  if (typeof import.meta.url === "string" && import.meta.url.length > 0) {
+    return resolve(dirname(fileURLToPath(import.meta.url)), "..");
+  }
+
+  return process.cwd();
+}
 
 let envFilesLoaded = false;
 
