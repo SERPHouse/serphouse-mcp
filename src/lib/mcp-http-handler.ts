@@ -65,9 +65,10 @@ export async function handleMcpPostRequest(
 }
 
 function extractApiKey(baseConfig: SerphouseConfig, req: HttpRequest): string | undefined {
-  const serphouseApiKey = firstHeader(req.headers?.serphouse_api)?.trim();
+  const headerApiKey = firstHeader(req.headers?.serphouse_api)?.trim();
+  const envApiKey = baseConfig.apiKey?.trim();
 
-  return serphouseApiKey;
+  return headerApiKey || envApiKey || undefined;
 }
 
 function firstHeader(value: string | string[] | undefined): string | undefined {

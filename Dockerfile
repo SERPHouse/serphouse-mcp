@@ -1,12 +1,9 @@
 # syntax=docker/dockerfile:1
 
-ARG NODE_VERSION=22
+ARG NODE_VERSION=20
+ARG ALPINE_VERSION=3.21
 
-FROM node:${NODE_VERSION}-alpine AS deps
-WORKDIR /app
-
-COPY package.json package-lock.json ./
-RUN npm ci --omit=dev && npm cache clean --force
+FROM node:${NODE_VERSION}-alpine AS node_base
 
 FROM node:${NODE_VERSION}-alpine AS build
 WORKDIR /app
@@ -17,21 +14,31 @@ RUN npm ci
 COPY tsconfig.json ./
 COPY src ./src
 
-RUN npm run build
+RUN npm run build \
+    && npx --yes esbuild@0.25.0 dist/src/http.js \
+      --bundle \
+      --platform=node \
+      --format=cjs \
+      --target=node20 \
+      --minify \
+      --legal-comments=none \
+      --outfile=dist/server.cjs \
+    && rm -rf src tsconfig.json node_modules package-lock.json \
+    && npm cache clean --force
 
-FROM node:${NODE_VERSION}-alpine AS production
+FROM alpine:${ALPINE_VERSION} AS production
 WORKDIR /app
 
 ENV NODE_ENV=production \
     HOST=0.0.0.0 \
     PORT=3000
 
-RUN addgroup -g 1001 -S nodejs \
+RUN apk add --no-cache ca-certificates libstdc++ libgcc \
+    && addgroup -g 1001 -S nodejs \
     && adduser -S mcp -u 1001 -G nodejs
 
-COPY package.json package-lock.json ./
-COPY --from=deps --chown=mcp:nodejs /app/node_modules ./node_modules
-COPY --from=build --chown=mcp:nodejs /app/dist ./dist
+COPY --from=node_base /usr/local/bin/node /usr/local/bin/node
+COPY --from=build --chown=mcp:nodejs /app/dist/server.cjs ./server.cjs
 
 USER mcp
 
@@ -40,4 +47,4 @@ EXPOSE 3000
 HEALTHCHECK --interval=30s --timeout=5s --start-period=10s --retries=3 \
   CMD node -e "fetch('http://127.0.0.1:' + (process.env.PORT || process.env.MCP_PORT || 3000) + '/health').then((r) => process.exit(r.ok ? 0 : 1)).catch(() => process.exit(1))"
 
-CMD ["node", "dist/src/http.js"]
+CMD ["node", "server.cjs"]
