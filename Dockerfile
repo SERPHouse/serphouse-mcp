@@ -8,8 +8,9 @@ FROM node:${NODE_VERSION}-alpine AS node_base
 FROM node:${NODE_VERSION}-alpine AS build
 WORKDIR /app
 
-COPY package.json  ./
-RUN npm ci
+COPY package.json ./
+RUN npm i --no-audit --no-fund --prefer-offline --legacy-peer-deps \
+    && npm cache clean --force
 
 COPY tsconfig.json ./
 COPY src ./src
