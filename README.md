@@ -32,6 +32,7 @@ Run Google searches, schedule SERP tasks, resolve locations, and query Jobs, Loc
 - [Tools Overview](#tools-overview)
 - [Self-Host Locally](#self-host-locally)
 - [Self-Host with Docker](#self-host-with-docker)
+- [Use with Local Llama Models (Ollama)](#use-with-local-llama-models-ollama)
 - [Troubleshooting](#troubleshooting)
 - [Contributing](#contributing)
 - [License](#license)
@@ -44,7 +45,7 @@ Run Google searches, schedule SERP tasks, resolve locations, and query Jobs, Loc
 |---|---|
 | **18 MCP tools** | Live SERP, scheduled tasks, Google verticals, and account lookups — all exposed with typed schemas |
 | **Zero glue code** | Your assistant picks the right tool; you describe what you need in plain language |
-| **Hosted or self-hosted** | Use the managed endpoint at `mcp.serphouse.com`, or run the server on your own infrastructure |
+| **Hosted or self-hosted** | Use the managed endpoint at `https://mcp.serphouse.com/mcp`, or run the server on your own infrastructure |
 | **Built-in context** | MCP resources (`serphouse_capabilities`, `serphouse_constraints`, `serphouse_examples`) teach the AI usage rules automatically |
 
 ---
@@ -53,7 +54,7 @@ Run Google searches, schedule SERP tasks, resolve locations, and query Jobs, Loc
 
 The fastest path — no build step, no server to maintain.
 
-**1.** Get your API key from the [SERPHouse dashboard](https://serphouse.com).
+**1.** Get your API key from the [SERPHouse Dashboard](https://www.serphouse.com).
 
 **2.** Add the server to your MCP client config:
 
@@ -224,6 +225,75 @@ The server runs at `http://localhost:3000/mcp`.
   }
 }
 ```
+
+---
+
+## Use with Local Llama Models (Ollama)
+
+Hook up your SERPHouse MCP Server to a local Llama model (e.g. Llama 3.1 or 3.2) using [`ollmcp`](https://github.com/jonigl/mcp-client-for-ollama) — an interactive terminal UI client that brings real-time search engine power straight to your local LLM workflow.
+
+### Prerequisites
+
+| Requirement | Notes |
+|-------------|-------|
+| **Tool-calling Llama model** | A model that supports tool calls (e.g. `llama3.1`, `llama3.2`) installed and running via [Ollama](https://ollama.com) |
+| **Python 3.10+** | Required to run the `ollmcp` terminal client |
+| **Node.js** | Required to run the SERPHouse MCP server via `npx` |
+
+### 1. Install `ollmcp`
+
+`ollmcp` is a Python client, so install it globally with `pip`:
+
+```bash
+pip install --upgrade ollmcp
+```
+
+### 2. Create a `config.json` file
+
+The client needs a configuration profile that tells it how to launch the SERPHouse server and pass your API credentials. Create a `config.json` in your working folder:
+
+```json
+{
+  "mcpServers": {
+    "serphouse-mcp": {
+      "url": "https://mcp.serphouse.com/mcp",
+      "headers": {
+        "SERPHOUSE_API_KEY": "YOUR_SERPHouse_API_KEY"
+      }
+    }
+  }
+}
+```
+
+> Replace `YOUR_SERPHouse_API_KEY` with your active key from the [SERPHouse Dashboard](https://www.serphouse.com).
+
+### 3. Run the terminal client
+
+Launch the interactive interface, passing your config profile and target model:
+
+```bash
+ollmcp --servers-json config.json --model llama3.1
+```
+
+###### Once the terminal UI loads:
+
+1. Select your target Llama model from the model list.
+2. Submit a prompt that needs live web data — e.g. *"Look up the top Google results for 'best developer tools' using SERPHouse."*
+3. Watch your local Llama model call the SERPHouse tools and turn real-time SERP data into a conversational answer.
+
+### Compatible Models
+
+The following Ollama models work well with tool use:
+
+- gemma4
+- qwen3.5
+- lfm2.5-thinking
+- llama3.2
+- mistral
+
+For a complete list of Ollama models with tool use capabilities, visit the official [Ollama models](https://ollama.com/search?c=tools) page.
+
+For models that can also process images returned by tools, see the Ollama [vision models](https://ollama.com/search?c=vision) page.
 
 ---
 

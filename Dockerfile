@@ -30,10 +30,6 @@ RUN npm run build \
 FROM alpine:${ALPINE_VERSION} AS production
 WORKDIR /app
 
-ENV NODE_ENV=production \
-    HOST=0.0.0.0 \
-    PORT=3000
-
 RUN apk add --no-cache ca-certificates libstdc++ libgcc \
     && addgroup -g 1001 -S nodejs \
     && adduser -S mcp -u 1001 -G nodejs
