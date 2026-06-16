@@ -1,7 +1,15 @@
 {
-  "name": "mcp",
+  "name": "serphouse-mcp",
+  "version": "1.0.0",
+  "description": "SERPHouse MCP Server — connect AI assistants to live SERP data, Google verticals, and SEO intelligence.",
+  "mcpName": "io.github.SERPHouse/serphouse-mcp",
   "type": "module",
-  "private": true,
+  "bin": {
+    "serphouse-mcp": "dist/src/index.js"
+  },
+  "files": [
+    "dist"
+  ],
   "scripts": {
     "build": "tsc",
     "start": "node dist/src/http.js",
@@ -25,5 +33,29 @@
     "@modelcontextprotocol/sdk": "^1.29.0",
     "dotenv": "^17.4.2",
     "zod": "^4.4.3"
-  }
+  },
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/serphouse/serphouse-mcp.git"
+  },
+  "publisher": "SERPHouse",
+  "keywords": [
+    "serp api",
+    "scraping",
+    "serphouse mcp",
+    "serp scraping",
+    "serp data",
+    "serp intelligence",
+    "serp tasks",
+    "serp results",
+    "serp",
+    "mcp server",
+    "google serp api",
+    "yahoo serp api",
+    "sdk",
+    "serphouse",
+    "Search",
+    "Result",
+    "scrape"
+  ]
 }
