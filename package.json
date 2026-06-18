@@ -8,7 +8,8 @@
     "start:stdio": "node dist/src/index.js",
     "dev": "node --watch src/http.ts",
     "typecheck": "tsc --noEmit",
-    "dev:ins": "DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run start:stdio"
+    "dev:ins": "DANGEROUSLY_OMIT_AUTH=true npx @modelcontextprotocol/inspector npm run start:stdio",
+     "format": "npx prettier --write \"src/**/*.{js,jsx,ts,tsx,json,css,scss,md}\""
   },
   "devDependencies": {
     "@modelcontextprotocol/inspector": "^0.22.0",
@@ -23,7 +24,6 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.29.0",
-    "dotenv": "^17.4.2",
     "zod": "^4.4.3"
   }
 }

@@ -6,7 +6,7 @@
 
 **Connect AI assistants to live SERP data, Google verticals, and SEO intelligence — powered by [SERPHouse](https://serphouse.com).**
 
-Run Google searches, schedule SERP tasks, resolve locations, and query Jobs, Local, Videos, and more — directly from Cursor, VS Code, Claude Desktop, or any MCP-compatible client. No custom API integration required.
+Run Google searches, resolve locations, and query Jobs, Local, Videos, and more — directly from Cursor, VS Code, Claude Desktop, or any MCP-compatible client. No custom API integration required.
 
 <br />
 
@@ -42,7 +42,7 @@ Run Google searches, schedule SERP tasks, resolve locations, and query Jobs, Loc
 
 | | |
 |---|---|
-| **18 MCP tools** | Live SERP, scheduled tasks, Google verticals, and account lookups — all exposed with typed schemas |
+| **13 MCP tools** | Live SERP, Google verticals, and account lookups — all exposed with typed schemas |
 | **Zero glue code** | Your assistant picks the right tool; you describe what you need in plain language |
 | **Hosted or self-hosted** | Use the managed endpoint at `mcp.serphouse.com`, or run the server on your own infrastructure |
 | **Built-in context** | MCP resources (`serphouse_capabilities`, `serphouse_constraints`, `serphouse_examples`) teach the AI usage rules automatically |
@@ -86,13 +86,13 @@ For SEO teams, agencies, and SaaS marketers who need live search data inside the
 | **Beat competitors** | *"Who owns the top 5 spots for 'project management software' in London?"* |
 | **Own local search** | *"Top Google Local results for 'emergency plumber' in Chicago."* |
 | **Discover keywords** | *"What does Autocomplete suggest for 'best saas for'?"* |
-| **Monitor positions** | *"Schedule a mobile SERP check for our brand in NYC and report our rank."* |
+| **Monitor positions** | *"Run a mobile SERP check for our brand in NYC and report our rank."* |
 
 ---
 
 ## Tools Overview
 
-The server exposes **18 tools** across four categories. Every SERP and Google vertical request requires exactly one location field — `loc` (e.g. `Austin,Texas,United States`) or `loc_id` (from `serphouse_location_search`). Never send both or omit both.
+The server exposes **13 tools** across three categories. Every SERP and Google vertical request requires exactly one location field — `loc` (e.g. `Austin,Texas,United States`) or `loc_id` (from `serphouse_location_search`). Never send both or omit both.
 
 ### Reference
 
@@ -110,16 +110,6 @@ The server exposes **18 tools** across four categories. Every SERP and Google ve
 | `serphouse_serp_live` | Submit a live SERP query |
 | `serphouse_serp_live_get` | Retrieve live SERP results |
 | `serphouse_serp_google_advanced` | Advanced Google SERP with extended parameters |
-
-### Scheduled
-
-| Tool | Description |
-|------|-------------|
-| `serphouse_serp_schedule` | Schedule a SERP task |
-| `serphouse_serp_google_advanced_scheduled` | Schedule an advanced Google SERP task |
-| `serphouse_task_check` | Poll task status |
-| `serphouse_task_get` | Fetch completed task results |
-| `serphouse_schedule_and_wait` | Schedule, poll, and return results in one call |
 
 ### Google Verticals
 
@@ -176,15 +166,14 @@ Point your MCP client at the local instance:
 
 Health check: `GET http://localhost:3000/health`
 
-### Environment Variables
+### Server Options
 
 | Variable | Default | Description |
 |----------|---------|-------------|
-| `SERPHOUSE_API_KEY` | — | API key for stdio mode (`start:stdio`) or optional fixed key for standalone HTTP |
-| `SERPHOUSE_BASE_URL` | `https://api.serphouse.com` | SERPHouse API base URL |
-| `SERPHOUSE_TIMEOUT_MS` | `60000` | Request timeout in ms |
 | `PORT` | `3000` | HTTP listen port |
 | `HOST` | `0.0.0.0` | HTTP bind address |
+
+Authentication is header-only. Send `SERPHOUSE_API: <api_key>` on every `/mcp` request (configure it in your MCP client `headers`).
 
 ---
 
@@ -192,34 +181,22 @@ Health check: `GET http://localhost:3000/health`
 
 Run the MCP server locally in Docker without installing Node.js.
 
-### 1. Set environment variables
-
-```bash
-cp .env.example .env
-```
-
-Edit `.env` and set your API key:
-
-```bash
-SERPHOUSE_API_KEY=your_serphouse_api_key
-PORT=3000
-```
-
-### 2. Start the server
-
 ```bash
 docker compose up -d
 ```
 
 The server runs at `http://localhost:3000/mcp`.
 
-### 3. Connect your MCP client
+Connect your MCP client with the API key in headers:
 
 ```json
 {
   "mcpServers": {
     "serphouse": {
-      "url": "http://localhost:3000/mcp"
+      "url": "http://localhost:3000/mcp",
+      "headers": {
+        "SERPHOUSE_API": "YOUR_SERPHouse_API_KEY"
+      }
     }
   }
 }
@@ -231,7 +208,7 @@ The server runs at `http://localhost:3000/mcp`.
 
 | Issue | Fix |
 |-------|-----|
-| Missing API key | Send `SERPHOUSE_API` header (HTTP) or set `SERPHOUSE_API_KEY` (stdio) |
+| Missing API key | Send `SERPHOUSE_API` header on `/mcp` requests |
 | Invalid key | Verify your key in the [SERPHouse dashboard](https://serphouse.com) |
 | Credit exhausted | Check balance with `serphouse_account_info` |
 | Location error | Include `loc` or `loc_id`; use `serphouse_location_search` to resolve IDs |
