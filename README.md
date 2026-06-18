@@ -1,12 +1,12 @@
 <div align="center">
 
-<img src="assets/serphouse-logo.png" alt="SERPHouse logo" width="80" />
+<img src="./assets/serphouse-logo.png" alt="SERPHouse logo" width="80" />
 
 # SERPHouse MCP Server
 
 **Connect AI assistants to live SERP data, Google verticals, and SEO intelligence — powered by [SERPHouse](https://serphouse.com).**
 
-Run Google searches, resolve locations, and query Jobs, Local, Videos, and more — directly from Cursor, VS Code, Claude Desktop, or any MCP-compatible client. No custom API integration required.
+Run Google, Bing, and Yahoo searches, resolve locations, and query Jobs, Local, Videos, and more — directly from Cursor, VS Code, Claude Desktop, or any MCP-compatible client. No custom API integration required.
 
 <br />
 
@@ -42,10 +42,10 @@ Run Google searches, resolve locations, and query Jobs, Local, Videos, and more 
 
 | | |
 |---|---|
-| **13 MCP tools** | Live SERP, Google verticals, and account lookups — all exposed with typed schemas |
+| **21 MCP tools** | Live Google, Bing, and Yahoo SERP, Google verticals, and account lookups — all exposed with typed schemas |
 | **Zero glue code** | Your assistant picks the right tool; you describe what you need in plain language |
 | **Hosted or self-hosted** | Use the managed endpoint at `mcp.serphouse.com`, or run the server on your own infrastructure |
-| **Built-in context** | MCP resources (`serphouse_capabilities`, `serphouse_constraints`, `serphouse_examples`) teach the AI usage rules automatically |
+| **Built-in context** | MCP resources `serphouse_guide` and `serphouse_examples` teach tool routing, domains, location, and SEO rules |
 
 ---
 
@@ -70,7 +70,7 @@ The fastest path — no build step, no server to maintain.
 }
 ```
 
-**3.** Start chatting. Ask your assistant to search Google, look up locations, fetch jobs, or check your account — it will route to the correct tool.
+**3.** Start chatting. Ask your assistant to search Google, Bing, or Yahoo, look up locations, fetch jobs, or check your account — it will route to the correct tool.
 
 > **One-click install:** Use the **Install in VS Code** or **Install in Cursor** badges above, then replace the placeholder API key with yours.
 
@@ -86,13 +86,14 @@ For SEO teams, agencies, and SaaS marketers who need live search data inside the
 | **Beat competitors** | *"Who owns the top 5 spots for 'project management software' in London?"* |
 | **Own local search** | *"Top Google Local results for 'emergency plumber' in Chicago."* |
 | **Discover keywords** | *"What does Autocomplete suggest for 'best saas for'?"* |
-| **Monitor positions** | *"Run a mobile SERP check for our brand in NYC and report our rank."* |
+| **Monitor positions** | *"Run a mobile Bing SERP check for our brand in NYC and report our rank."* |
+| **Multi-engine coverage** | *"Compare Yahoo and Google news results for 'electric vehicles'."* |
 
 ---
 
 ## Tools Overview
 
-The server exposes **13 tools** across three categories. Every SERP and Google vertical request requires exactly one location field — `loc` (e.g. `Austin,Texas,United States`) or `loc_id` (from `serphouse_location_search`). Never send both or omit both.
+The server exposes **21 tools** across five categories. Google and Bing SERP requests require exactly one location field — `loc` (e.g. `Austin,Texas,United States`) or `loc_id` (from `serphouse_location_search`). Never send both or omit both on those endpoints. Yahoo SERP tools do not require location.
 
 ### Reference
 
@@ -103,13 +104,31 @@ The server exposes **13 tools** across three categories. Every SERP and Google v
 | `serphouse_location_search` | Resolve city/country names to `loc_id` |
 | `serphouse_account_info` | Account balance and usage |
 
-### Live SERP
+### Google SERP
 
 | Tool | Description |
 |------|-------------|
-| `serphouse_serp_live` | Submit a live SERP query |
-| `serphouse_serp_live_get` | Retrieve live SERP results |
-| `serphouse_serp_google_advanced` | Advanced Google SERP with extended parameters |
+| `serphouse_google_web` | Google web search |
+| `serphouse_google_image` | Google image search |
+| `serphouse_google_news` | Google news search |
+| `serphouse_google_shop` | Google shopping search |
+| `serphouse_serp_google_advanced` | Advanced Google SERP with extended parameters (up to 100 results) |
+
+### Bing SERP
+
+| Tool | Description |
+|------|-------------|
+| `serphouse_bing_web` | Bing web search |
+| `serphouse_bing_image` | Bing image search |
+| `serphouse_bing_news` | Bing news search |
+
+### Yahoo SERP
+
+| Tool | Description |
+|------|-------------|
+| `serphouse_yahoo_web` | Yahoo web search |
+| `serphouse_yahoo_image` | Yahoo image search |
+| `serphouse_yahoo_news` | Yahoo news search |
 
 ### Google Verticals
 
@@ -211,7 +230,7 @@ Connect your MCP client with the API key in headers:
 | Missing API key | Send `SERPHOUSE_API` header on `/mcp` requests |
 | Invalid key | Verify your key in the [SERPHouse dashboard](https://serphouse.com) |
 | Credit exhausted | Check balance with `serphouse_account_info` |
-| Location error | Include `loc` or `loc_id`; use `serphouse_location_search` to resolve IDs |
+| Location error | For Google and Bing tools, include `loc` or `loc_id` (not both); use `serphouse_location_search` to resolve IDs. Yahoo SERP tools do not require location. |
 | Connection refused | Confirm the server is running and the URL/port is correct |
 
 ---

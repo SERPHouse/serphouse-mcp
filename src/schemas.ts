@@ -83,6 +83,142 @@ const videoFilterShape = {
   video_captions: z.literal("captioned").optional(),
 };
 
+const noTraceSchema = z
+  .union([
+    z.literal(0),
+    z.literal(1),
+    z.literal("0"),
+    z.literal("1"),
+    z.literal("true"),
+    z.literal("false"),
+    z.literal(true),
+    z.literal(false),
+  ])
+  .optional()
+  .describe(
+    "Enterprise only. Enables NoTrace mode when set to 1 or true.",
+  );
+
+const yahooDomainSchema = nonEmptyString.refine(
+  (domain) => domain.toLowerCase().includes("yahoo"),
+  "Use a supported regional Yahoo domain from serphouse_domain_list, for example uk.yahoo.com or de.yahoo.com. yahoo.com is not supported.",
+);
+
+const googleWebSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  domain: googleDomainSchema.default("google.com"),
+  lang: nonEmptyString.default("en"),
+  device: z.enum(["desktop", "mobile"]).default("desktop"),
+  ...locationShape,
+  page: pageSchema.optional(),
+  date_range: nonEmptyString
+    .optional()
+    .describe("Date range as YYYY-MM-DD,YYYY-MM-DD or one of h, d, w, m, y."),
+  verbatim: bitFlagSchema.optional(),
+  gfilter: bitFlagSchema.optional(),
+  num_result: z.coerce.number().int().min(1).max(10).optional(),
+  no_trace: noTraceSchema,
+};
+
+const googleImageSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  domain: googleDomainSchema.default("google.com"),
+  lang: nonEmptyString.default("en"),
+  ...locationShape,
+  page: pageSchema.optional(),
+  date_range: nonEmptyString.optional(),
+  no_trace: noTraceSchema,
+};
+
+const googleNewsSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  domain: googleDomainSchema.default("google.com"),
+  lang: nonEmptyString.default("en"),
+  device: z.enum(["desktop", "mobile"]).default("desktop"),
+  ...locationShape,
+  page: pageSchema.optional(),
+  date_range: nonEmptyString.optional(),
+  no_trace: noTraceSchema,
+};
+
+const googleShopSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  domain: googleDomainSchema.default("google.com"),
+  lang: nonEmptyString.default("en"),
+  ...locationShape,
+  page: pageSchema.optional(),
+  no_trace: noTraceSchema,
+};
+
+const bingWebSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  lang: nonEmptyString
+    .default("en-US")
+    .describe("Language code, for example en-US or fr-FR."),
+  device: z.enum(["desktop", "mobile"]).default("desktop"),
+  ...locationShape,
+  page: pageSchema.optional(),
+  date_range: nonEmptyString.optional(),
+  no_trace: noTraceSchema,
+};
+
+const bingImageSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  lang: nonEmptyString.default("en-US"),
+  ...locationShape,
+  page: pageSchema.optional(),
+  no_trace: noTraceSchema,
+};
+
+const bingNewsSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  lang: nonEmptyString.default("en-US"),
+  device: z.enum(["desktop", "mobile"]).default("desktop"),
+  ...locationShape,
+  page: pageSchema.optional(),
+  no_trace: noTraceSchema,
+};
+
+const yahooWebSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  domain: yahooDomainSchema
+    .default("uk.yahoo.com")
+    .describe(
+      "Regional Yahoo domain from serphouse_domain_list, for example uk.yahoo.com or fr.yahoo.com. Do not use yahoo.com.",
+    ),
+  lang: nonEmptyString
+    .default("lang_en")
+    .describe("Yahoo language code, for example lang_en or lang_fr."),
+  device: z.enum(["desktop", "mobile"]).default("desktop"),
+  page: pageSchema.optional(),
+  no_trace: noTraceSchema,
+};
+
+const yahooImageSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  domain: yahooDomainSchema
+    .default("uk.yahoo.com")
+    .describe(
+      "Regional Yahoo domain from serphouse_domain_list, for example uk.yahoo.com or fr.yahoo.com. Do not use yahoo.com.",
+    ),
+  lang: nonEmptyString.default("lang_en"),
+  page: pageSchema.optional(),
+  no_trace: noTraceSchema,
+};
+
+const yahooNewsSearchShape = {
+  q: nonEmptyString.describe("Search phrase to query."),
+  domain: yahooDomainSchema
+    .default("uk.yahoo.com")
+    .describe(
+      "Regional Yahoo domain from serphouse_domain_list, for example uk.yahoo.com or fr.yahoo.com. Do not use yahoo.com.",
+    ),
+  lang: nonEmptyString.default("lang_en"),
+  device: z.enum(["desktop", "mobile"]).default("desktop"),
+  page: pageSchema.optional(),
+  no_trace: noTraceSchema,
+};
+
 export const emptyInputSchema = z.object({});
 
 export const languageListInputSchema = z.object({
@@ -223,6 +359,40 @@ export const googleLocalInputSchema = z
     page: pageSchema.optional(),
   })
   .superRefine(requireExactlyOneLocation);
+
+export const googleWebSearchInputSchema = z
+  .object(googleWebSearchShape)
+  .superRefine(requireExactlyOneLocation);
+
+export const googleImageSearchInputSchema = z
+  .object(googleImageSearchShape)
+  .superRefine(requireExactlyOneLocation);
+
+export const googleNewsSearchInputSchema = z
+  .object(googleNewsSearchShape)
+  .superRefine(requireExactlyOneLocation);
+
+export const googleShopSearchInputSchema = z
+  .object(googleShopSearchShape)
+  .superRefine(requireExactlyOneLocation);
+
+export const bingWebSearchInputSchema = z
+  .object(bingWebSearchShape)
+  .superRefine(requireExactlyOneLocation);
+
+export const bingImageSearchInputSchema = z
+  .object(bingImageSearchShape)
+  .superRefine(requireExactlyOneLocation);
+
+export const bingNewsSearchInputSchema = z
+  .object(bingNewsSearchShape)
+  .superRefine(requireExactlyOneLocation);
+
+export const yahooWebSearchInputSchema = z.object(yahooWebSearchShape);
+
+export const yahooImageSearchInputSchema = z.object(yahooImageSearchShape);
+
+export const yahooNewsSearchInputSchema = z.object(yahooNewsSearchShape);
 
 function requireExactlyOneLocation(
   value: { loc?: string; loc_id?: string | number },

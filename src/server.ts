@@ -2,19 +2,28 @@ import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { SerphouseConfig } from "./config.ts";
 import { get, post } from "./api.ts";
-import { capabilities, constraints, examples } from "./resources.ts";
+import { examples, guide } from "./resources.ts";
 import {
+  bingImageSearchInputSchema,
+  bingNewsSearchInputSchema,
+  bingWebSearchInputSchema,
   emptyInputSchema,
   googleAdvancedInputSchema,
   googleAutocompleteInputSchema,
   googleForumsInputSchema,
+  googleImageSearchInputSchema,
   googleJobsInputSchema,
   googleLocalInputSchema,
+  googleNewsSearchInputSchema,
+  googleShopSearchInputSchema,
   googleShortVideosInputSchema,
   googleVideosInputSchema,
+  googleWebSearchInputSchema,
   languageListInputSchema,
   locationSearchInputSchema,
-  serpLiveInputSchema,
+  yahooImageSearchInputSchema,
+  yahooNewsSearchInputSchema,
+  yahooWebSearchInputSchema,
 } from "./schemas.ts";
 import { compact } from "./lib/utils.ts";
 
@@ -52,7 +61,7 @@ function registerTools(server: McpServer, config: SerphouseConfig): void {
     {
       title: "Serphouse Domain List",
       description:
-        "Get supported Google, Bing, and Yahoo search domains from Serphouse.",
+        "List supported search domains. Call this before Yahoo searches — yahoo.com is not valid; use regional domains like uk.yahoo.com from this list.",
       inputSchema: emptyInputSchema,
     },
     async () => handle(() => get(config, "/domain/list")),
@@ -90,25 +99,106 @@ function registerTools(server: McpServer, config: SerphouseConfig): void {
   );
 
   server.registerTool(
-    "serphouse_serp_live",
+    "serphouse_google_web",
     {
-      title: "Serphouse Live SERP",
-      description:
-        "Run a realtime SERP query using the documented POST /serp/live endpoint.",
-      inputSchema: serpLiveInputSchema,
+      title: "Serphouse Google Web Search",
+      description: "Run a realtime Google web search via POST /google-web.",
+      inputSchema: googleWebSearchInputSchema,
     },
-    async (args) => handle(() => post(config, "/serp/live", compact(args))),
+    async (args) => handle(() => post(config, "/google-web", compact(args))),
   );
 
   server.registerTool(
-    "serphouse_serp_live_get",
+    "serphouse_google_image",
     {
-      title: "Serphouse Live SERP GET",
+      title: "Serphouse Google Image Search",
       description:
-        "Run a realtime SERP query using the documented GET /serp/live endpoint.",
-      inputSchema: serpLiveInputSchema,
+        "Run a realtime Google image search via POST /google-image.",
+      inputSchema: googleImageSearchInputSchema,
     },
-    async (args) => handle(() => get(config, "/serp/live", compact(args))),
+    async (args) => handle(() => post(config, "/google-image", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_google_news",
+    {
+      title: "Serphouse Google News Search",
+      description: "Run a realtime Google news search via POST /google-news.",
+      inputSchema: googleNewsSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/google-news", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_google_shop",
+    {
+      title: "Serphouse Google Shop Search",
+      description:
+        "Run a realtime Google shopping search via POST /google-shop.",
+      inputSchema: googleShopSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/google-shop", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_bing_web",
+    {
+      title: "Serphouse Bing Web Search",
+      description: "Run a realtime Bing web search via POST /bing-web.",
+      inputSchema: bingWebSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/bing-web", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_bing_image",
+    {
+      title: "Serphouse Bing Image Search",
+      description: "Run a realtime Bing image search via POST /bing-image.",
+      inputSchema: bingImageSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/bing-image", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_bing_news",
+    {
+      title: "Serphouse Bing News Search",
+      description: "Run a realtime Bing news search via POST /bing-news.",
+      inputSchema: bingNewsSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/bing-news", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_yahoo_web",
+    {
+      title: "Serphouse Yahoo Web Search",
+      description: "Run a realtime Yahoo web search via POST /yahoo-web.",
+      inputSchema: yahooWebSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/yahoo-web", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_yahoo_image",
+    {
+      title: "Serphouse Yahoo Image Search",
+      description:
+        "Run a realtime Yahoo image search via POST /yahoo-image.",
+      inputSchema: yahooImageSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/yahoo-image", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_yahoo_news",
+    {
+      title: "Serphouse Yahoo News Search",
+      description: "Run a realtime Yahoo news search via POST /yahoo-news.",
+      inputSchema: yahooNewsSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/yahoo-news", compact(args))),
   );
 
   server.registerTool(
@@ -116,7 +206,7 @@ function registerTools(server: McpServer, config: SerphouseConfig): void {
     {
       title: "Serphouse Google Advanced SERP",
       description:
-        "Fetch up to 100 Google results using max_pages from 1 to 10.",
+        "SEO ranking checks: fetch up to 100 Google results in one request. Use max_pages 1–10 (~10 results per page). Prefer this over serphouse_google_web when the user needs rank position beyond the top 10.",
       inputSchema: googleAdvancedInputSchema,
     },
     async (args) =>
@@ -196,21 +286,17 @@ function registerTools(server: McpServer, config: SerphouseConfig): void {
 function registerResources(server: McpServer): void {
   registerJsonResource(
     server,
-    "serphouse_capabilities",
-    "resource://serphouse/capabilities",
-    capabilities,
-  );
-  registerJsonResource(
-    server,
-    "serphouse_constraints",
-    "resource://serphouse/constraints",
-    constraints,
+    "serphouse_guide",
+    "resource://serphouse/guide",
+    guide,
+    "Tool catalog, routing, location, and domain rules (compact).",
   );
   registerJsonResource(
     server,
     "serphouse_examples",
     "resource://serphouse/examples",
     examples,
+    "Minimal example payloads per engine.",
   );
 }
 
@@ -219,12 +305,14 @@ function registerJsonResource(
   name: string,
   uri: string,
   data: unknown,
+  description?: string,
 ): void {
   server.registerResource(
     name,
     uri,
     {
       title: name.replaceAll("_", " "),
+      description,
       mimeType: "application/json",
     },
     async () => ({
