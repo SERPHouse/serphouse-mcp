@@ -1,0 +1,45 @@
+{
+  "$schema": "https://static.modelcontextprotocol.io/schemas/2025-12-11/server.schema.json",
+  "name": "io.github.SERPHouse/serphouse-mcp",
+  "title": "SERPHouse MCP Server",
+  "description": "Connect AI assistants to live SERP data, Google verticals, and SEO intelligence. Run Google searches, schedule SERP tasks, resolve locations, and query Jobs, Local, Videos, and more via SERPHouse.",
+  "version": "1.0.0",
+  "websiteUrl": "https://www.serphouse.com",
+  "repository": {
+    "url": "https://github.com/SERPHouse/serphouse-mcp",
+    "source": "github"
+  },
+  "packages": [
+    {
+      "registryType": "npm",
+      "identifier": "serphouse-mcp",
+      "version": "1.0.0",
+      "runtimeHint": "npx",
+      "transport": {
+        "type": "stdio"
+      },
+      "environmentVariables": [
+        {
+          "name": "SERPHOUSE_API_KEY",
+          "description": "Your SERPHouse API key (get one at https://www.serphouse.com).",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ],
+  "remotes": [
+    {
+      "type": "streamable-http",
+      "url": "https://mcp.serphouse.com/mcp",
+      "headers": [
+        {
+          "name": "SERPHOUSE_API",
+          "description": "Your SERPHouse API key (get one at https://www.serphouse.com).",
+          "isRequired": true,
+          "isSecret": true
+        }
+      ]
+    }
+  ]
+}
