@@ -9,11 +9,4 @@ services:
     environment:
       HOST: ${HOST:-0.0.0.0}
       PORT: ${PORT:-3000}
-      SERPHOUSE_API_KEY: ${SERPHOUSE_API_KEY}
-      SERPHOUSE_API_TOKEN: ${SERPHOUSE_API_TOKEN:-}
-      SERPHOUSE_BASE_URL: ${SERPHOUSE_BASE_URL:-}
-      SERPHOUSE_TIMEOUT_MS: ${SERPHOUSE_TIMEOUT_MS:-}
-    env_file:
-      - path: .env
-        required: false
     restart: unless-stopped

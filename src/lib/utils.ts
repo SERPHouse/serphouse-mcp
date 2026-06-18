@@ -3,13 +3,12 @@ import { JsonRpcErrorCode } from "../constants.ts";
 type QueryValue = string | number | boolean | null | undefined;
 type QueryParams = Record<string, QueryValue>;
 
-/** Pause execution for the given number of milliseconds. */
-export function sleep(ms: number): Promise<void> {
-  return new Promise((resolve) => setTimeout(resolve, ms));
-}
-
 /** Join a base URL with a path and optional query-string parameters. */
-export function buildUrl(baseUrl: string, path: string, query?: QueryParams): URL {
+export function buildUrl(
+  baseUrl: string,
+  path: string,
+  query?: QueryParams,
+): URL {
   const url = new URL(path, baseUrl);
 
   for (const [key, value] of Object.entries(query ?? {})) {
@@ -23,7 +22,10 @@ export function buildUrl(baseUrl: string, path: string, query?: QueryParams): UR
 }
 
 /** Standard JSON-RPC 2.0 error envelope used by the HTTP MCP transport. */
-export function jsonRpcError(message: string, id: string | number | null): Record<string, unknown> {
+export function jsonRpcError(
+  message: string,
+  id: string | number | null,
+): Record<string, unknown> {
   return {
     jsonrpc: "2.0",
     error: {
@@ -57,28 +59,6 @@ export function compact<T>(value: T): T {
   }
 
   return output as T;
-}
-
-/** Mask API keys and tokens before returning data to MCP clients. */
-export function redactSecrets(value: unknown): unknown {
-  if (Array.isArray(value)) {
-    return value.map((item) => redactSecrets(item));
-  }
-
-  if (!isRecord(value)) {
-    return value;
-  }
-
-  const output: Record<string, unknown> = {};
-  for (const [key, nestedValue] of Object.entries(value)) {
-    if (/api[_-]?key|api[_-]?token|authorization|token/i.test(key)) {
-      output[key] = "[redacted]";
-    } else {
-      output[key] = redactSecrets(nestedValue);
-    }
-  }
-
-  return output;
 }
 
 /** Return log-safe error details without request bodies, headers, or tokens. */

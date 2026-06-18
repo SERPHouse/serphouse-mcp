@@ -1,6 +1,6 @@
 import { StreamableHTTPServerTransport } from "@modelcontextprotocol/sdk/server/streamableHttp.js";
 import { HttpStatus, Messages } from "../constants.ts";
-import type { SerphouseConfig } from "../config.ts";
+import type { ServerConfig } from "../config.ts";
 import { createSerphouseServer } from "../server.ts";
 import { errorForLog, jsonRpcError } from "./utils.ts";
 
@@ -20,26 +20,32 @@ type HttpResponse = {
   on(event: "close", listener: () => void): HttpResponse;
 };
 
-type HandleRequestArgs = Parameters<StreamableHTTPServerTransport["handleRequest"]>;
+type HandleRequestArgs = Parameters<
+  StreamableHTTPServerTransport["handleRequest"]
+>;
 
 export async function handleMcpPostRequest(
-  baseConfig: SerphouseConfig,
+  serverConfig: ServerConfig,
   req: HttpRequest,
   res: HttpResponse,
 ): Promise<void> {
-  const apiKey = extractApiKey(baseConfig, req);
+  const apiKey = extractApiKey(req);
 
   if (!apiKey) {
-    res.status(HttpStatus.BAD_REQUEST).json(jsonRpcError(Messages.MISSING_API_KEY_IN_PATH, null));
+    res
+      .status(HttpStatus.BAD_REQUEST)
+      .json(jsonRpcError(Messages.MISSING_API_KEY_IN_PATH, null));
     return;
   }
 
   if (!isValidApiKey(apiKey)) {
-    res.status(HttpStatus.BAD_REQUEST).json(jsonRpcError(Messages.INVALID_API_KEY, null));
+    res
+      .status(HttpStatus.BAD_REQUEST)
+      .json(jsonRpcError(Messages.INVALID_API_KEY, null));
     return;
   }
 
-  const server = createSerphouseServer({ ...baseConfig, apiKey });
+  const server = createSerphouseServer({ ...serverConfig, apiKey });
   const transport = new StreamableHTTPServerTransport({
     sessionIdGenerator: undefined,
   });
@@ -59,16 +65,15 @@ export async function handleMcpPostRequest(
   } catch (error) {
     console.error("Error handling MCP request:", errorForLog(error));
     if (!res.headersSent) {
-      res.status(HttpStatus.INTERNAL_SERVER_ERROR).json(jsonRpcError(Messages.INTERNAL_SERVER_ERROR, null));
+      res
+        .status(HttpStatus.INTERNAL_SERVER_ERROR)
+        .json(jsonRpcError(Messages.INTERNAL_SERVER_ERROR, null));
     }
   }
 }
 
-function extractApiKey(baseConfig: SerphouseConfig, req: HttpRequest): string | undefined {
-  const headerApiKey = firstHeader(req.headers?.serphouse_api)?.trim();
-  const envApiKey = baseConfig.apiKey?.trim();
-
-  return headerApiKey || envApiKey || undefined;
+function extractApiKey(req: HttpRequest): string | undefined {
+  return firstHeader(req.headers?.serphouse_api)?.trim() || undefined;
 }
 
 function firstHeader(value: string | string[] | undefined): string | undefined {
@@ -76,5 +81,9 @@ function firstHeader(value: string | string[] | undefined): string | undefined {
 }
 
 function isValidApiKey(apiKey: string): boolean {
-  return apiKey.length > 0 && apiKey.length <= MAX_API_KEY_LENGTH && !/[\r\n\t]/.test(apiKey);
+  return (
+    apiKey.length > 0 &&
+    apiKey.length <= MAX_API_KEY_LENGTH &&
+    !/[\r\n\t]/.test(apiKey)
+  );
 }

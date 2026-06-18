@@ -1,69 +1,70 @@
 import { McpServer } from "@modelcontextprotocol/sdk/server/mcp.js";
 import type { CallToolResult } from "@modelcontextprotocol/sdk/types.js";
 import type { SerphouseConfig } from "./config.ts";
-import { createSerphouseClient, type SerphouseClient } from "./client.ts";
-import { capabilities, constraints, examples } from "./resources.ts";
+import { get, post } from "./api.ts";
+import { examples, guide } from "./resources.ts";
 import {
+  bingImageSearchInputSchema,
+  bingNewsSearchInputSchema,
+  bingWebSearchInputSchema,
   emptyInputSchema,
   googleAdvancedInputSchema,
-  googleAdvancedScheduledInputSchema,
   googleAutocompleteInputSchema,
   googleForumsInputSchema,
+  googleImageSearchInputSchema,
   googleJobsInputSchema,
   googleLocalInputSchema,
+  googleNewsSearchInputSchema,
+  googleShopSearchInputSchema,
   googleShortVideosInputSchema,
   googleVideosInputSchema,
-  idInputSchema,
+  googleWebSearchInputSchema,
   languageListInputSchema,
   locationSearchInputSchema,
-  scheduleAndWaitInputSchema,
-  scheduleSerpInputSchema,
-  serpLiveInputSchema,
+  yahooImageSearchInputSchema,
+  yahooNewsSearchInputSchema,
+  yahooWebSearchInputSchema,
 } from "./schemas.ts";
-import { ErrorCode, Messages } from "./constants.ts";
-import {
-  errorToBody,
-  extractTaskId,
-  isCompletedStatus,
-  runSerphouseTool,
-  toolError,
-  toolSuccess,
-  upstreamErrorBody,
-} from "./lib/tool-response.ts";
-import { compact, redactSecrets, sleep } from "./lib/utils.ts";
+import { compact } from "./lib/utils.ts";
 
-/**
- * Create the MCP server and register every Serphouse tool.
- *
- * Request flow for a tool call:
- *   1. MCP client invokes a tool (e.g. serphouse_serp_live).
- *   2. Zod validates the input against the tool schema.
- *   3. The handler calls SerphouseClient (GET or POST).
- *   4. runSerphouseTool formats the API response as an MCP result.
- */
 export function createSerphouseServer(config: SerphouseConfig): McpServer {
   const server = new McpServer({
     name: "serphouse-mcp",
-    version: "0.1.0",
+    version: "0.1.1",
   });
 
-  const client = createSerphouseClient(config);
-
   registerResources(server);
-  registerTools(server, client);
+  registerTools(server, config);
 
   return server;
 }
 
-function registerTools(server: McpServer, client: SerphouseClient): void {
+async function handle(call: () => Promise<unknown>): Promise<CallToolResult> {
+  try {
+    const data = await call();
+    const text = JSON.stringify(data, null, 2);
+    return { content: [{ type: "text", text }] };
+  } catch (error) {
+    const message = error instanceof Error ? error.message : String(error);
+    return {
+      content: [
+        { type: "text", text: JSON.stringify({ error: message }, null, 2) },
+      ],
+      isError: true,
+    };
+  }
+}
+
+function registerTools(server: McpServer, config: SerphouseConfig): void {
   server.registerTool(
     "serphouse_domain_list",
     {
       title: "Serphouse Domain List",
-      description: "Get supported Google, Bing, and Yahoo search domains from Serphouse.",
+      description:
+        "List supported search domains. Call this before Yahoo searches — yahoo.com is not valid; use regional domains like uk.yahoo.com from this list.",
       inputSchema: emptyInputSchema,
     },
-    async () => runSerphouseTool("GET /domain/list", () => client.get("/domain/list")),
+    async () => handle(() => get(config, "/domain/list")),
   );
 
   server.registerTool(
@@ -73,110 +74,143 @@ function registerTools(server: McpServer, client: SerphouseClient): void {
       description: "Get supported language codes for google, bing, or yahoo.",
       inputSchema: languageListInputSchema,
     },
-    async (args) => runSerphouseTool(`GET /language/list/${args.type}`, () => client.get(`/language/list/${args.type}`)),
+    async (args) => handle(() => get(config, `/language/list/${args.type}`)),
   );
 
   server.registerTool(
     "serphouse_location_search",
     {
       title: "Serphouse Location Search",
-      description: "Search Serphouse location ids and location strings for Google or Bing targeting.",
+      description:
+        "Search Serphouse location ids and location strings for Google or Bing targeting.",
       inputSchema: locationSearchInputSchema,
     },
-    async (args) => runSerphouseTool("GET /location/search", () => client.get("/location/search", args)),
+    async (args) => handle(() => get(config, "/location/search", args)),
   );
 
   server.registerTool(
     "serphouse_account_info",
     {
       title: "Serphouse Account Info",
-      description: "Get Serphouse account plan and credit usage. Secret fields are redacted.",
+      description: "Get Serphouse account plan and credit usage.",
       inputSchema: emptyInputSchema,
     },
-    async () => runSerphouseTool("GET /account/info", () => client.get("/account/info")),
+    async () => handle(() => get(config, "/account/info")),
   );
 
   server.registerTool(
-    "serphouse_serp_live",
+    "serphouse_google_web",
     {
-      title: "Serphouse Live SERP",
-      description: "Run a realtime SERP query using the documented POST /serp/live endpoint.",
-      inputSchema: serpLiveInputSchema,
+      title: "Serphouse Google Web Search",
+      description: "Run a realtime Google web search via POST /google-web.",
+      inputSchema: googleWebSearchInputSchema,
     },
-    async (args) => runSerphouseTool("POST /serp/live", () => client.postData("/serp/live", compact(args))),
+    async (args) => handle(() => post(config, "/google-web", compact(args))),
   );
 
   server.registerTool(
-    "serphouse_serp_live_get",
+    "serphouse_google_image",
     {
-      title: "Serphouse Live SERP GET",
-      description: "Run a realtime SERP query using the documented GET /serp/live endpoint.",
-      inputSchema: serpLiveInputSchema,
+      title: "Serphouse Google Image Search",
+      description:
+        "Run a realtime Google image search via POST /google-image.",
+      inputSchema: googleImageSearchInputSchema,
     },
-    async (args) => runSerphouseTool("GET /serp/live", () => client.get("/serp/live", compact(args))),
+    async (args) => handle(() => post(config, "/google-image", compact(args))),
   );
 
   server.registerTool(
-    "serphouse_serp_schedule",
+    "serphouse_google_news",
     {
-      title: "Serphouse Schedule SERP",
-      description: "Schedule one or more SERP tasks. The MCP input is tasks; the client sends Serphouse { data: tasks }.",
-      inputSchema: scheduleSerpInputSchema,
+      title: "Serphouse Google News Search",
+      description: "Run a realtime Google news search via POST /google-news.",
+      inputSchema: googleNewsSearchInputSchema,
     },
-    async (args) => runSerphouseTool("POST /serp/schedule", () => client.postData("/serp/schedule", compact(args.tasks))),
+    async (args) => handle(() => post(config, "/google-news", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_google_shop",
+    {
+      title: "Serphouse Google Shop Search",
+      description:
+        "Run a realtime Google shopping search via POST /google-shop.",
+      inputSchema: googleShopSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/google-shop", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_bing_web",
+    {
+      title: "Serphouse Bing Web Search",
+      description: "Run a realtime Bing web search via POST /bing-web.",
+      inputSchema: bingWebSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/bing-web", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_bing_image",
+    {
+      title: "Serphouse Bing Image Search",
+      description: "Run a realtime Bing image search via POST /bing-image.",
+      inputSchema: bingImageSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/bing-image", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_bing_news",
+    {
+      title: "Serphouse Bing News Search",
+      description: "Run a realtime Bing news search via POST /bing-news.",
+      inputSchema: bingNewsSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/bing-news", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_yahoo_web",
+    {
+      title: "Serphouse Yahoo Web Search",
+      description: "Run a realtime Yahoo web search via POST /yahoo-web.",
+      inputSchema: yahooWebSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/yahoo-web", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_yahoo_image",
+    {
+      title: "Serphouse Yahoo Image Search",
+      description:
+        "Run a realtime Yahoo image search via POST /yahoo-image.",
+      inputSchema: yahooImageSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/yahoo-image", compact(args))),
+  );
+
+  server.registerTool(
+    "serphouse_yahoo_news",
+    {
+      title: "Serphouse Yahoo News Search",
+      description: "Run a realtime Yahoo news search via POST /yahoo-news.",
+      inputSchema: yahooNewsSearchInputSchema,
+    },
+    async (args) => handle(() => post(config, "/yahoo-news", compact(args))),
   );
 
   server.registerTool(
     "serphouse_serp_google_advanced",
     {
       title: "Serphouse Google Advanced SERP",
-      description: "Fetch up to 100 Google results using max_pages from 1 to 10.",
+      description:
+        "SEO ranking checks: fetch up to 100 Google results in one request. Use max_pages 1–10 (~10 results per page). Prefer this over serphouse_google_web when the user needs rank position beyond the top 10.",
       inputSchema: googleAdvancedInputSchema,
     },
-    async (args) => runSerphouseTool("POST /serp/google_advanced", () => client.postData("/serp/google_advanced", compact(args))),
-  );
-
-  server.registerTool(
-    "serphouse_serp_google_advanced_scheduled",
-    {
-      title: "Serphouse Google Advanced Scheduled SERP",
-      description: "Schedule Google advanced SERP tasks with max_pages from 1 to 10.",
-      inputSchema: googleAdvancedScheduledInputSchema,
-    },
     async (args) =>
-      runSerphouseTool("POST /serp/google_advanced_scheduled", () =>
-        client.postData("/serp/google_advanced_scheduled", compact(args.tasks)),
-      ),
-  );
-
-  server.registerTool(
-    "serphouse_task_check",
-    {
-      title: "Serphouse Task Check",
-      description: "Check the status of a scheduled SERP task.",
-      inputSchema: idInputSchema,
-    },
-    async (args) => runSerphouseTool("GET /serp/check", () => client.get("/serp/check", args)),
-  );
-
-  server.registerTool(
-    "serphouse_task_get",
-    {
-      title: "Serphouse Task Get",
-      description: "Fetch the result for a completed scheduled SERP task.",
-      inputSchema: idInputSchema,
-    },
-    async (args) => runSerphouseTool("GET /serp/get", () => client.get("/serp/get", args)),
-  );
-
-  server.registerTool(
-    "serphouse_schedule_and_wait",
-    {
-      title: "Serphouse Schedule And Wait",
-      description: "Schedule one SERP task, poll until completion, then fetch the final result.",
-      inputSchema: scheduleAndWaitInputSchema,
-    },
-    async (args) => runScheduleAndWait(client, args),
+      handle(() => post(config, "/serp/google_advanced", compact(args))),
   );
 
   server.registerTool(
@@ -186,7 +220,8 @@ function registerTools(server: McpServer, client: SerphouseClient): void {
       description: "Run a realtime Google Jobs search.",
       inputSchema: googleJobsInputSchema,
     },
-    async (args) => runSerphouseTool("POST /google-jobs-api", () => client.postData("/google-jobs-api", compact(args))),
+    async (args) =>
+      handle(() => post(config, "/google-jobs-api", compact(args))),
   );
 
   server.registerTool(
@@ -196,17 +231,20 @@ function registerTools(server: McpServer, client: SerphouseClient): void {
       description: "Get realtime localized Google autocomplete suggestions.",
       inputSchema: googleAutocompleteInputSchema,
     },
-    async (args) => runSerphouseTool("POST /google-autocomplete-api", () => client.postData("/google-autocomplete-api", compact(args))),
+    async (args) =>
+      handle(() => post(config, "/google-autocomplete-api", compact(args))),
   );
 
   server.registerTool(
     "serphouse_google_videos",
     {
       title: "Serphouse Google Videos",
-      description: "Run a realtime Google Videos search with optional video filters.",
+      description:
+        "Run a realtime Google Videos search with optional video filters.",
       inputSchema: googleVideosInputSchema,
     },
-    async (args) => runSerphouseTool("POST /google-videos-api", () => client.postData("/google-videos-api", compact(args))),
+    async (args) =>
+      handle(() => post(config, "/google-videos-api", compact(args))),
   );
 
   server.registerTool(
@@ -216,42 +254,65 @@ function registerTools(server: McpServer, client: SerphouseClient): void {
       description: "Run a realtime Google Short Videos search.",
       inputSchema: googleShortVideosInputSchema,
     },
-    async (args) => runSerphouseTool("POST /google-short-videos-api", () => client.postData("/google-short-videos-api", compact(args))),
+    async (args) =>
+      handle(() => post(config, "/google-short-videos-api", compact(args))),
   );
 
   server.registerTool(
     "serphouse_google_forums",
     {
       title: "Serphouse Google Forums",
-      description: "Run a realtime Google Forums search for discussions and community results.",
+      description:
+        "Run a realtime Google Forums search for discussions and community results.",
       inputSchema: googleForumsInputSchema,
     },
-    async (args) => runSerphouseTool("POST /google-forums-api", () => client.postData("/google-forums-api", compact(args))),
+    async (args) =>
+      handle(() => post(config, "/google-forums-api", compact(args))),
   );
 
   server.registerTool(
     "serphouse_google_local",
     {
       title: "Serphouse Google Local",
-      description: "Run a realtime Google Local search for local business results.",
+      description:
+        "Run a realtime Google Local search for local business results.",
       inputSchema: googleLocalInputSchema,
     },
-    async (args) => runSerphouseTool("POST /google-local-api", () => client.postData("/google-local-api", compact(args))),
+    async (args) =>
+      handle(() => post(config, "/google-local-api", compact(args))),
   );
 }
 
 function registerResources(server: McpServer): void {
-  registerJsonResource(server, "serphouse_capabilities", "resource://serphouse/capabilities", capabilities);
-  registerJsonResource(server, "serphouse_constraints", "resource://serphouse/constraints", constraints);
-  registerJsonResource(server, "serphouse_examples", "resource://serphouse/examples", examples);
+  registerJsonResource(
+    server,
+    "serphouse_guide",
+    "resource://serphouse/guide",
+    guide,
+    "Tool catalog, routing, location, and domain rules (compact).",
+  );
+  registerJsonResource(
+    server,
+    "serphouse_examples",
+    "resource://serphouse/examples",
+    examples,
+    "Minimal example payloads per engine.",
+  );
 }
 
-function registerJsonResource(server: McpServer, name: string, uri: string, data: unknown): void {
+function registerJsonResource(
+  server: McpServer,
+  name: string,
+  uri: string,
+  data: unknown,
+  description?: string,
+): void {
   server.registerResource(
     name,
     uri,
     {
       title: name.replaceAll("_", " "),
+      description,
       mimeType: "application/json",
     },
     async () => ({
@@ -264,75 +325,4 @@ function registerJsonResource(server: McpServer, name: string, uri: string, data
       ],
     }),
   );
-}
-
-/** Composite tool: schedule → poll /serp/check → fetch /serp/get when complete. */
-async function runScheduleAndWait(
-  client: SerphouseClient,
-  args: {
-    task: Record<string, unknown>;
-    poll_interval_ms: number;
-    max_wait_ms: number;
-  },
-): Promise<CallToolResult> {
-  const startedAt = Date.now();
-  const statusChecks: unknown[] = [];
-
-  try {
-    const schedule = await client.postData("/serp/schedule", [compact(args.task)]);
-    const scheduleError = upstreamErrorBody("POST /serp/schedule", schedule);
-    if (scheduleError) {
-      return toolError(scheduleError);
-    }
-
-    const taskId = extractTaskId(schedule);
-    if (!taskId) {
-      return toolSuccess({
-        endpoint: "POST /serp/schedule",
-        warning: Messages.SCHEDULE_NO_TASK_ID,
-        schedule: redactSecrets(schedule),
-      });
-    }
-
-    while (Date.now() - startedAt <= args.max_wait_ms) {
-      const status = await client.get("/serp/check", { id: taskId });
-      statusChecks.push(redactSecrets(status));
-
-      const statusError = upstreamErrorBody("GET /serp/check", status);
-      if (statusError) {
-        return toolError(statusError);
-      }
-
-      if (isCompletedStatus(status)) {
-        const result = await client.get("/serp/get", { id: taskId });
-        const resultError = upstreamErrorBody("GET /serp/get", result);
-        if (resultError) {
-          return toolError(resultError);
-        }
-
-        return toolSuccess({
-          task_id: taskId,
-          elapsed_ms: Date.now() - startedAt,
-          schedule: redactSecrets(schedule),
-          status_checks: statusChecks,
-          result: redactSecrets(result),
-        });
-      }
-
-      await sleep(args.poll_interval_ms);
-    }
-
-    return toolError({
-      ok: false,
-      code: ErrorCode.TIMEOUT,
-      message: Messages.timeoutWaitingForTask(taskId),
-      details: {
-        task_id: taskId,
-        elapsed_ms: Date.now() - startedAt,
-        status_checks: statusChecks,
-      },
-    });
-  } catch (error) {
-    return toolError(errorToBody("serphouse_schedule_and_wait", error));
-  }
 }
