@@ -254,7 +254,7 @@ The client needs a configuration profile that tells it how to launch the SERPHou
     "serphouse-mcp": {
       "url": "https://mcp.serphouse.com/mcp",
       "headers": {
-        "SERPHOUSE_API_KEY": "YOUR_SERPHouse_API_KEY"
+        "SERPHOUSE_API": "YOUR_SERPHouse_API_KEY"
       }
     }
   }
